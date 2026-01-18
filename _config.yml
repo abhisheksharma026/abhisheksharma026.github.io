@@ -1,0 +1,36 @@
+title: Abhishek Sharma
+description: Engineering Notes, Research Reviews, and Applied AI Systems
+theme: minima
+markdown: kramdown
+
+# If you later add a custom domain, set url and baseurl.
+# url: "https://abhisheksharma026.github.io"
+# baseurl: ""
+
+# Collections for structured content (research + projects)
+collections:
+  research:
+    output: true
+    permalink: /research/:name/
+  projects:
+    output: true
+    permalink: /projects/:name/
+
+# Blog posts keep the default Jekyll posts convention
+permalink: /blog/:year/:month/:day/:title/
+
+# Optional: show excerpts on listing pages
+show_excerpts: true
+
+# Build settings
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Clean, predictable navigation links (minima supports header_pages)
+header_pages:
+  - index.md
+  - projects.md
+  - research.md
+  - blog.md
+  - about.md

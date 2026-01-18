@@ -1,0 +1,29 @@
+---
+layout: page
+---
+
+<article class="post">
+  <header class="post-header">
+    <h1 class="post-title">{{ page.title }}</h1>
+
+    {% if page.repo %}
+      <p><strong>Repo:</strong> <a href="{{ page.repo }}">{{ page.repo }}</a></p>
+    {% endif %}
+
+    {% if page.demo %}
+      <p><strong>Demo:</strong> <a href="{{ page.demo }}">{{ page.demo }}</a></p>
+    {% endif %}
+
+    {% if page.stack %}
+      <p><strong>Stack:</strong> {{ page.stack }}</p>
+    {% endif %}
+
+    {% if page.status %}
+      <p><strong>Status:</strong> {{ page.status }}</p>
+    {% endif %}
+  </header>
+
+  <div class="post-content">
+    {{ content }}
+  </div>
+</article>
