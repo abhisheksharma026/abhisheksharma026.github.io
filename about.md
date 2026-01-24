@@ -44,14 +44,9 @@ My current areas of focus include:
 
 ## Work & profiles
 
-- **Google Scholar:**  
-  [https://scholar.google.com/citations?user=EEQB3G8AAAAJ&hl=en](https://scholar.google.com/citations?user=EEQB3G8AAAAJ&hl=en)
-
-- **GitHub:**  
-  [https://github.com/abhisheksharma026](https://github.com/abhisheksharma026)
-
-- **Kaggle:**  
-  [https://www.kaggle.com/anotherbadcode](https://www.kaggle.com/anotherbadcode)
+- **[Google Scholar](https://scholar.google.com/citations?user=EEQB3G8AAAAJ&hl=en)**
+- **[GitHub](https://github.com/abhisheksharma026)**
+- **[Kaggle](https://www.kaggle.com/anotherbadcode)**
 
 ---
 
