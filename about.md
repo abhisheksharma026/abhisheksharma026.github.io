@@ -4,7 +4,7 @@ title: About
 permalink: /about/
 ---
 
-I am an **AI Engineery**, working on **production-grade AI systems** that sit at the intersection of **research ideas and real-world engineering constraints**. My focus is on building systems that are not only accurate, but **observable, reproducible, and deployable at scale**.
+I am an **AI Engineer**, working on **production-grade AI systems** that sit at the intersection of **research ideas and real-world engineering constraints**. My focus is on building systems that are not only accurate, but **observable, reproducible, and deployable at scale**.
 
 My work spans **agentic AI, large language models, forecasting, and applied machine learning**, with an emphasis on turning theory into production grade systems.
 
