@@ -4,7 +4,7 @@ title: AI Travel Planner
 summary: An AI trip-planning agent with a modular multi-agent architecture (concierge orchestrator + specialized agents), a CLI entrypoint, and a web UI.
 order: 1
 repo: https://github.com/abhisheksharma026/Trip-Planner
-stack: Python, Google ADK, Flask web UI, Modular agents + tools
+stack: Python, Google ADK, FastAPI, SQLite, Docker, Modular agents + tools
 status: Active
 ---
 
@@ -50,16 +50,23 @@ I document the build in two layers:
 
 ## Current release checkpoint
 
-The project currently has a tagged release:
+The project has two tagged releases:
 
-- Tag: **v1.0.0**
-- Tag notes describe the initial release and major features
-- Commit: **ef6b78d**
+- Tag: **v1.0.0** — Phase I MVP (commit: **ef6b78d**)
+- Tag: **v2.0.0** — Phase II Production-Ready Backend (commit: **401209d**, pre-release)
 
-Tags:  
+**What's in v2.0.0:**
+- User authentication system (PBKDF2 hashing, SQLite)
+- Multi-level rate limiting (global/anonymous/user)
+- Security middleware (CSP, XSS protection, HSTS)
+- Request logging & tracing
+- CORS security fixes
+- Docker containerization
+- 100% passing test suite
+- Production deployment configs
+
+Tags:
 https://github.com/abhisheksharma026/Trip-Planner/tags
-
-> Note: The Phase I documentation and blog posts were written after the `v1.0.0` tag was created, and retrospectively describe the architecture and behavior of the system at that release.
 
 
 ---
@@ -71,7 +78,7 @@ Detailed implementation notes remain in the main repository.
 
 Proposed phases:
 1. Phase I — MVP architecture + agents + orchestration + UI + baseline observability
-2. Phase II — WIP
+2. Phase II — Production-ready backend: auth, rate limiting, security middleware, Docker
 3. Phase III — TBD
 4. Phase IV — TBD
 5. Phase V — TBD
@@ -80,10 +87,10 @@ Proposed phases:
 
 ## Reproducibility (next step)
 
-Right now the stable checkpoint is `v1.0.0`.  
-As the project evolves, I will add **phase tags** (e.g., `phase-1-mvp`, `phase-2-auth`) so readers can check out the exact system state per phase.
+Each phase has a corresponding tag so readers can check out the exact system state:
 
 ```bash
 git clone https://github.com/abhisheksharma026/Trip-Planner
-git checkout v1.0.0
+git checkout v1.0.0   # Phase I — MVP
+git checkout v2.0.0   # Phase II — Production-ready backend
 ```
