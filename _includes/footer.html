@@ -1,0 +1,16 @@
+{%- comment -%}
+  Slim footer: minima's default repeated the site title (twice) and tagline,
+  all already in the header/home intro. One muted line: name + a few links.
+{%- endcomment -%}
+<footer class="site-footer">
+  <div class="wrapper footer-inner">
+    <span class="footer-name">{{ site.title | escape }}</span>
+    <span class="footer-links">
+      <a href="https://github.com/abhisheksharma026">GitHub</a>
+      <a href="https://scholar.google.com/citations?user=EEQB3G8AAAAJ&hl=en">Scholar</a>
+      <a href="https://www.kaggle.com/anotherbadcode">Kaggle</a>
+      <a href="https://www.linkedin.com/in/abhishek-sharma-50254721/">LinkedIn</a>
+      <a href="{{ "/feed.xml" | relative_url }}">RSS</a>
+    </span>
+  </div>
+</footer>
