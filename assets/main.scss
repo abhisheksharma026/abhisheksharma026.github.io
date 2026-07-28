@@ -142,9 +142,35 @@ blockquote {
 .listing .summary { display: block; color: var(--muted); font-size: .95rem; margin-top: 4px; }
 
 /* Post / project / research meta ---------------------------------------- */
-.post-title { font-size: 2rem; }
+/* Fill the column width instead of balancing into two even half-lines. */
+.post-title { font-size: 2rem; text-wrap: pretty; }
 .post-header p strong { font-family: var(--mono); font-size: .78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); font-weight: 600; }
 .post-meta { color: var(--faint); font-family: var(--mono); font-size: .8rem; }
+
+/* Tables ---------------------------------------------------------------- */
+/* Minima's defaults are tuned for a light page, so table text washes out in
+   dark mode. Drive every cell from the theme tokens for contrast either way. */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5em 0;
+  color: var(--ink);
+  font-size: .93rem;
+  font-variant-numeric: tabular-nums;
+}
+table th, table td {
+  border: 1px solid var(--line);
+  padding: .5rem .8rem;
+  color: var(--ink);
+  vertical-align: top;
+}
+table thead th {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 660;
+  text-align: left;
+}
+table tbody tr:nth-child(even) td { background: var(--surface); }
 
 /* Footer ---------------------------------------------------------------- */
 .site-footer {
