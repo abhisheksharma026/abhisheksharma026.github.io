@@ -556,8 +556,10 @@ Running it prints the byte breakdown from earlier, with `word_embeddings.weight`
     margin: 1.4rem auto;
     max-width: 720px;
     overflow-x: auto;
+    display: flex;
+    justify-content: center;
   }
-  .mermaid svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  .mermaid svg { max-width: 100%; height: auto; }
 </style>
 
 <!-- Render the mermaid diagrams above. GitHub Pages (kramdown+Rouge) emits
