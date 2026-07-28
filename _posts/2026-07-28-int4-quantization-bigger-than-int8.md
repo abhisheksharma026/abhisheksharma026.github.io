@@ -544,6 +544,24 @@ Running it prints the byte breakdown from earlier, with `word_embeddings.weight`
 *Figures come from the shared evaluation pool: 30 questions, 20 candidate passages each, 512-token cap. Sizes are on-disk bytes, checked by summing every initializer in each ONNX file and comparing that back against the files themselves. Latency is arm64-local on the CPU provider and directional, not a production number. One caveat on it: the two halves were not timed in the same process. The fp32 and int8 runs warm up on two queries before the clock starts, the int4 and mixed runs do not, so those two carry a first-call penalty the others avoid. Over 30 queries at roughly 8.7 s each that is worth a percent or two, nowhere near the 2.4x gap, but it is not the same stopwatch.*
 
 
+<!-- Diagrams sit on a fixed light "paper" canvas in both themes. The mermaid
+     node/label text is dark, so on the site's dark background it would be
+     invisible without this; the light card keeps it readable either way. -->
+<style>
+  .mermaid {
+    background: #fbfaf4;
+    border: 1px solid #e4dfce;
+    border-radius: 14px;
+    padding: 16px 12px;
+    margin: 1.4rem auto;
+    max-width: 720px;
+    overflow-x: auto;
+    display: flex;
+    justify-content: center;
+  }
+  .mermaid svg { max-width: 100%; height: auto; }
+</style>
+
 <!-- Render the mermaid diagrams above. GitHub Pages (kramdown+Rouge) emits
      ```mermaid fences as .language-mermaid code blocks and does not draw them,
      so swap each into a <pre class="mermaid"> and run mermaid from the CDN. -->
