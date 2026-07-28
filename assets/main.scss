@@ -207,5 +207,17 @@ table tbody tr:nth-child(even) td { background: var(--surface); }
   border-top: 1px solid var(--line);
   color: var(--muted);
 }
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .8rem;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  font-family: var(--mono);
+  font-size: .8rem;
+}
+.footer-links { display: flex; gap: 16px; }
 .site-footer a, .site-footer a:visited { color: var(--muted); }
-.footer-heading, .site-footer .footer-col-wrapper { color: var(--muted); }
+.site-footer a:hover { color: var(--accent); }
