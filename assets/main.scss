@@ -72,14 +72,43 @@ code, pre, tt {
   font-size: .86em;
   border: 0;
 }
+/* Inline code: themed teal chip (readable in both modes). */
 code { background: var(--accent-weak); color: var(--accent); padding: 1px 6px; border-radius: 5px; }
-pre {
-  background: var(--surface);
-  border: 1px solid var(--line);
+
+/* Code blocks: a fixed dark "terminal" surface in BOTH themes. Minima hardcodes
+   .highlight { background:#fff } for a light page; in dark mode that left the
+   plaintext bar-charts/logs as light-on-white (invisible). Pinning the surface
+   dark means Rouge's token colours always land on the right background. */
+pre, .highlight, .highlighter-rouge .highlight, figure.highlight, pre.highlight {
+  background: #0f1b24 !important;
   border-radius: 10px;
-  padding: 16px 18px;
 }
-pre code { background: none; color: var(--ink); padding: 0; }
+pre {
+  border: 1px solid #22303c;
+  padding: 16px 18px;
+  overflow-x: auto;
+}
+pre code, pre.highlight code, .highlight pre, .highlight code {
+  background: transparent !important;
+  color: #dce7ee;
+  padding: 0;
+}
+/* Readable syntax palette on the dark code surface. */
+.highlight .c, .highlight .c1, .highlight .cm, .highlight .cs, .highlight .cp,
+.highlight .cd { color: #8598a6 !important; font-style: italic; }
+.highlight .k, .highlight .kc, .highlight .kd, .highlight .kn, .highlight .kp,
+.highlight .kr, .highlight .kt, .highlight .o, .highlight .ow { color: #7dd3fc !important; }
+.highlight .s, .highlight .s1, .highlight .s2, .highlight .sb, .highlight .sc,
+.highlight .sd, .highlight .se, .highlight .sh, .highlight .si, .highlight .sx,
+.highlight .sr, .highlight .ss, .highlight .dl { color: #86efac !important; }
+.highlight .m, .highlight .mi, .highlight .mf, .highlight .mh, .highlight .mo,
+.highlight .il { color: #fbbf24 !important; }
+.highlight .nb, .highlight .bp, .highlight .nf, .highlight .fm, .highlight .nc,
+.highlight .nn, .highlight .na, .highlight .nv, .highlight .nx,
+.highlight .n { color: #dce7ee !important; }
+.highlight .go { color: #c2cfd8 !important; }
+.highlight .gp, .highlight .gh { color: #7dd3fc !important; }
+.highlight .err { color: #f87171 !important; background: transparent !important; }
 
 blockquote {
   color: var(--muted);
