@@ -40,7 +40,7 @@ The word doing all the work in that last column is "theory". You only get the sa
 To see why, you have to look at what the model is built from. `bge-reranker-v2-m3` is a multilingual cross-encoder, fine-tuned from the `BAAI/bge-m3` foundation model rather than a vanilla XLM-RoBERTa-large. It does sit on that XLM-RoBERTa-large backbone (the graph is full of `roberta.*` tensors, a 250k SentencePiece vocab, and an 8194-row position table, so roughly an 8192-token context), and that backbone is all that matters for this post. Three kinds of weight-carrying layers matter, and the important bit is that they run on different underlying operations. A quantizer keys off the operation, not off how big the weight is, and that gap is where the whole thing goes sideways.
 
 ```mermaid
-%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'},'flowchart':{'nodeSpacing':20,'rankSpacing':18}}}%%
+%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','mainBkg':'#fbfaf4','clusterBkg':'#f4f1ea','clusterBorder':'#d8d1bd','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'},'flowchart':{'nodeSpacing':20,'rankSpacing':18}}}%%
 flowchart TB
   IN["query + passage tokens"] --> EMB
   subgraph EMB["Embeddings (Gather op)"]
@@ -89,7 +89,7 @@ row = table[token_id]  # table: [250002, 1024], just indexed by token
 The same idea as a picture. One is a multiply the tool can rewrite, the other is a table lookup it has no rule for:
 
 ```mermaid
-%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
+%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','mainBkg':'#fbfaf4','clusterBkg':'#f4f1ea','clusterBorder':'#d8d1bd','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
 flowchart TB
   subgraph MATMUL["MatMul · a Linear layer"]
     direction LR
@@ -319,7 +319,7 @@ Here is the path each precision actually takes:
 The same three paths as a picture. Notice the extra box on int4 that the other two do not have:
 
 ```mermaid
-%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
+%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','mainBkg':'#fbfaf4','clusterBkg':'#f4f1ea','clusterBorder':'#d8d1bd','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
 flowchart TB
   subgraph FP["fp32"]
     direction LR
@@ -390,7 +390,7 @@ Latency is the one that genuinely turns on the hardware, exactly as the SIMD bre
 One fp32 model, three ways to shrink it, three very different outcomes:
 
 ```mermaid
-%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
+%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','mainBkg':'#fbfaf4','clusterBkg':'#f4f1ea','clusterBorder':'#d8d1bd','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
 flowchart TB
   M["bge fp32 · 2272 MB"]
   M --> I8["int8 · 571 MB · near-lossless"]
@@ -554,12 +554,25 @@ Running it prints the byte breakdown from earlier, with `word_embeddings.weight`
     border-radius: 14px;
     padding: 16px 12px;
     margin: 1.4rem auto;
-    max-width: 720px;
+    max-width: 760px;
     overflow-x: auto;
-    display: flex;
-    justify-content: center;
+    text-align: center;
   }
   .mermaid svg { max-width: 100%; height: auto; }
+  /* Mermaid draws node/subgraph labels as HTML in <foreignObject>, so they
+     inherit the page's dark-mode (light) text colour and vanish on the light
+     card. Pin every label dark; node fill colours from the diagram are untouched. */
+  .mermaid foreignObject div,
+  .mermaid foreignObject span,
+  .mermaid foreignObject p,
+  .mermaid .nodeLabel,
+  .mermaid .edgeLabel,
+  .mermaid .cluster-label,
+  .mermaid text { color: #1f2937 !important; fill: #1f2937 !important; }
+  .mermaid .edgeLabel, .mermaid .edgeLabel foreignObject > div { background: #fbfaf4 !important; }
+  /* Subgraph (cluster) containers have no fill in these diagrams, so mermaid's
+     default renders dark; pin them to a light tone so the dark labels read. */
+  .mermaid .cluster rect { fill: #faf8f2 !important; stroke: #e5dfd0 !important; }
 </style>
 
 <!-- Render the mermaid diagrams above. GitHub Pages (kramdown+Rouge) emits
@@ -567,12 +580,16 @@ Running it prints the byte breakdown from earlier, with `word_embeddings.weight`
      so swap each into a <pre class="mermaid"> and run mermaid from the CDN. -->
 <script type="module">
   import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-  for (const block of document.querySelectorAll('.language-mermaid')) {
-    const pre = document.createElement('pre');
-    pre.className = 'mermaid';
-    pre.textContent = block.textContent;
-    block.replaceWith(pre);
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+  let i = 0;
+  for (const block of [...document.querySelectorAll('.language-mermaid')]) {
+    const src = block.textContent;
+    try {
+      const { svg } = await mermaid.render('mmd-' + (i++), src);
+      const fig = document.createElement('div');
+      fig.className = 'mermaid';
+      fig.innerHTML = svg;
+      block.replaceWith(fig);
+    } catch (e) { console.error('mermaid render failed for diagram', i, e); }
   }
-  mermaid.initialize({ startOnLoad: false });
-  await mermaid.run();
 </script>
