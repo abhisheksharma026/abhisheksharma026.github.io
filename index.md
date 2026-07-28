@@ -5,15 +5,10 @@ title: Home
 
 # Abhishek Sharma
 
-Applied AI/ML Engineer | Systems Thinker | Research-Driven
+<span class="eyebrow">AI Engineer · Berlin</span>
 
-This site is a structured hub for:
-- **Projects** (apps, systems, demos)
-- **Research reviews** (papers, ideas, critiques)
-- **Engineering blog** (design decisions, evolution, phase-based builds)
+I build production LLM agent systems — voice and chat agents, RAG pipelines, and the retrieval and orchestration plumbing that makes them reliable. This site is where I keep the working notes: the systems I've built, the papers I've read closely, and the design decisions behind them.
 
-## Start here
-
-- **Projects:** [/projects](/projects/)
-- **Research notes:** [/research](/research/)
-- **Blog:** [/blog](/blog/)
+- **[Projects](/projects/)** — apps, agents, and systems, with reproducibility links.
+- **[Research notes](/research/)** — paper reviews focused on intuition, limitations, and applied relevance.
+- **[Blog](/blog/)** — engineering notes and phase-based build logs.
