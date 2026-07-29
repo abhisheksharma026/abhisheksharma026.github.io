@@ -178,6 +178,8 @@ blockquote {
 .post-header p strong { font-family: var(--mono); font-size: .78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); font-weight: 600; }
 .post-meta { color: var(--faint); font-family: var(--mono); font-size: .8rem; }
 
+/* giscus reactions + comments block */
+.post-comments { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
 
 /* Tables ---------------------------------------------------------------- */
 /* Minima's defaults are tuned for a light page, so table text washes out in

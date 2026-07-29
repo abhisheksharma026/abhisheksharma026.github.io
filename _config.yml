@@ -34,3 +34,13 @@ header_pages:
   - research.md
   - blog.md
   - about.md
+
+# giscus reactions + comments (GitHub Discussions). The widget renders on posts
+# only once category_id is filled in, so nothing broken ships before setup.
+# Steps: (1) enable Discussions on the repo, (2) install the giscus app, then
+# fill category_id (auto-fetchable once Discussions is on).
+giscus:
+  repo: abhisheksharma026/abhisheksharma026.github.io
+  repo_id: R_kgDOQ8YWnw
+  category: Announcements
+  category_id: "DIC_kwDOQ8YWn84DCPJW"
