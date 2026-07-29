@@ -39,28 +39,28 @@ The word doing all the work in that last column is "theory". You only get the sa
 
 To see why, you have to look at what the model is built from. `bge-reranker-v2-m3` is a multilingual cross-encoder, fine-tuned from the `BAAI/bge-m3` foundation model rather than a vanilla XLM-RoBERTa-large. It does sit on that XLM-RoBERTa-large backbone (the graph is full of `roberta.*` tensors, a 250k SentencePiece vocab, and an 8194-row position table, so roughly an 8192-token context), and that backbone is all that matters for this post. Three kinds of weight-carrying layers matter, and the important bit is that they run on different underlying operations. A quantizer keys off the operation, not off how big the weight is, and that gap is where the whole thing goes sideways.
 
-```mermaid
-%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','mainBkg':'#fbfaf4','clusterBkg':'#f4f1ea','clusterBorder':'#d8d1bd','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'},'flowchart':{'nodeSpacing':20,'rankSpacing':18}}}%%
-flowchart TB
-  IN["query + passage tokens"] --> EMB
-  subgraph EMB["Embeddings (Gather op)"]
-    W["word_embeddings 250002 x 1024 · ~1024 MB"]
-    P["position_embeddings · ~34 MB"]
-  end
-  subgraph ENC["24 x Encoder layer (MatMul / Linear)"]
-    ATT["attention: Q / K / V / Output"]
-    FFN["feed-forward: 1024 to 4096 to 1024"]
-  end
-  subgraph HEAD["Classifier head (Gemm)"]
-    CLS["dense + out_proj · ~4 MB"]
-  end
-  EMB --> ENC --> HEAD --> OUT["relevance score"]
-  classDef default fill:#FBFAF4,stroke:#475569,stroke-width:1.5px,color:#111827;
-  classDef skip fill:#FCEBD3,stroke:#B45309,stroke-width:2px,color:#7A3B06;
-  classDef quant fill:#DCFCE7,stroke:#15803D,stroke-width:2px,color:#0B4A22;
-  class EMB,HEAD skip;
-  class ENC quant;
-```
+<figure class="dgm" style="max-width:470px">
+  <div class="box">query + passage tokens</div>
+  <div class="arrow">↓</div>
+  <div class="grp skip">
+    <div class="t">Embeddings (Gather op)</div>
+    <div class="box">word_embeddings 250002 × 1024 · ~1024 MB</div>
+    <div class="box">position_embeddings · ~34 MB</div>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="grp quant">
+    <div class="t">24 × Encoder (MatMul / Linear)</div>
+    <div class="box">attention: Q / K / V / Output</div>
+    <div class="box">feed-forward: 1024 → 4096 → 1024</div>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="grp skip">
+    <div class="t">Classifier head (Gemm)</div>
+    <div class="box">dense + out_proj · ~4 MB</div>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="box">relevance score</div>
+</figure>
 
 Green is a `MatMul`, so int4's MatMul-only quantizer shrinks it. Amber is a `Gather` or a `Gemm`, which int4 leaves alone, and one of those amber boxes is the 1 GB embedding. int8 shrinks all of it.
 
@@ -88,29 +88,36 @@ row = table[token_id]  # table: [250002, 1024], just indexed by token
 
 The same idea as a picture. One is a multiply the tool can rewrite, the other is a table lookup it has no rule for:
 
-```mermaid
-%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','mainBkg':'#fbfaf4','clusterBkg':'#f4f1ea','clusterBorder':'#d8d1bd','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
-flowchart TB
-  subgraph MATMUL["MatMul · a Linear layer"]
-    direction LR
-    X["input x (changes every call)"] --> MUL(("×"))
-    WC["weight W · constant, in the file"] --> MUL
-    MUL --> Y["output"]
-  end
-  subgraph GATHER["Gather · the embedding"]
-    direction LR
-    TID["token id"] --> LK["look up that one row"]
-    TAB["table 250002 x 1024 · constant, in the file"] --> LK
-    LK --> ROW["one row out"]
-  end
-  MATMUL --> V1["int4 packs it to 4-bit (constant W)"]
-  GATHER --> V2["int4 skips it (a Gather, not a MatMul)"]
-  classDef default fill:#FBFAF4,stroke:#475569,stroke-width:1.5px,color:#111827;
-  classDef good fill:#DCFCE7,stroke:#15803D,color:#0B4A22;
-  classDef bad fill:#FCEBD3,stroke:#B45309,color:#7A3B06;
-  class V1 good
-  class V2 bad
-```
+<figure class="dgm" style="max-width:660px">
+  <div class="row">
+    <div class="col">
+      <div class="grp plain">
+        <div class="t">MatMul · a Linear layer</div>
+        <div class="box">input x (changes every call)</div>
+        <div class="box">weight W · constant, in the file</div>
+        <div class="arrow">↓</div>
+        <div class="box">× (multiply)</div>
+        <div class="arrow">↓</div>
+        <div class="box">output</div>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="box good">int4 packs it to 4-bit (constant W)</div>
+    </div>
+    <div class="col">
+      <div class="grp plain">
+        <div class="t">Gather · the embedding</div>
+        <div class="box">token id</div>
+        <div class="box">table 250002 × 1024 · constant, in the file</div>
+        <div class="arrow">↓</div>
+        <div class="box">look up that one row</div>
+        <div class="arrow">↓</div>
+        <div class="box">one row out</div>
+      </div>
+      <div class="arrow">↓</div>
+      <div class="box bad">int4 skips it (a Gather, not a MatMul)</div>
+    </div>
+  </div>
+</figure>
 
 So why can't int4 shrink those 48? Because there is no weight there to shrink. Weight-only quantization knows exactly one move: take a constant matrix and store it smaller, ahead of time. But `Q·Kᵀ` and `softmax·V` multiply tensors that do not exist until a real query arrives, that are different for every input, and that never get written to disk. There is nothing sitting in the file to pre-compress. You *can* squeeze those tensors, but that is activation quantization, a different game (its static form needs calibration data; the dynamic form derives scales at runtime), and `MatMulNBits` does not play it. The nice part: those matmuls hold zero parameters. They are compute, not storage. Skipping them costs us nothing on disk, so it is the right call, not a miss.
 
@@ -318,25 +325,24 @@ Here is the path each precision actually takes:
 
 The same three paths as a picture. Notice the extra box on int4 that the other two do not have:
 
-```mermaid
-%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','mainBkg':'#fbfaf4','clusterBkg':'#f4f1ea','clusterBorder':'#d8d1bd','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
-flowchart TB
-  subgraph FP["fp32"]
-    direction LR
-    A1["float weights"] --> A2["FMA (NEON / AVX)"] --> A3["result"]
-  end
-  subgraph I8["int8"]
-    direction LR
-    B1["int8 weights"] --> B2["native int8 MAC: VNNI / DotProd / I8MM"] --> B3["result"]
-  end
-  subgraph I4["int4"]
-    direction LR
-    C1["4-bit weights"] --> C2["EXPAND to float: no int4 instruction exists"] --> C3["FMA / int8 MAC"] --> C4["result"]
-  end
-  classDef default fill:#FBFAF4,stroke:#475569,stroke-width:1.5px,color:#111827;
-  classDef extra fill:#FCEBD3,stroke:#B45309,color:#7A3B06;
-  class C2 extra
-```
+<figure class="dgm dgm-lanes" style="max-width:680px">
+  <div class="lane"><span class="lane-label">fp32</span>
+    <div class="box">float weights</div><span class="a">→</span>
+    <div class="box">FMA (NEON / AVX)</div><span class="a">→</span>
+    <div class="box">result</div>
+  </div>
+  <div class="lane"><span class="lane-label">int8</span>
+    <div class="box">int8 weights</div><span class="a">→</span>
+    <div class="box">native int8 MAC: VNNI / DotProd / I8MM</div><span class="a">→</span>
+    <div class="box">result</div>
+  </div>
+  <div class="lane"><span class="lane-label">int4</span>
+    <div class="box">4-bit weights</div><span class="a">→</span>
+    <div class="box bad">EXPAND to float: no int4 instruction exists</div><span class="a">→</span>
+    <div class="box">FMA / int8 MAC</div><span class="a">→</span>
+    <div class="box">result</div>
+  </div>
+</figure>
 
 That amber box is the whole penalty. int4 does everything fp32 and int8 do, plus an unpack the hardware cannot skip.
 
@@ -389,21 +395,15 @@ Latency is the one that genuinely turns on the hardware, exactly as the SIMD bre
 
 One fp32 model, three ways to shrink it, three very different outcomes:
 
-```mermaid
-%%{init: {'look':'handDrawn','theme':'base','themeVariables':{'primaryColor':'#ffffff','mainBkg':'#fbfaf4','clusterBkg':'#f4f1ea','clusterBorder':'#d8d1bd','primaryTextColor':'#1f2937','primaryBorderColor':'#334155','lineColor':'#475569','fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'13px'}}}%%
-flowchart TB
-  M["bge fp32 · 2272 MB"]
-  M --> I8["int8 · 571 MB · near-lossless"]
-  M --> I4["int4 · 1252 MB · bigger, slower"]
-  M --> MX["mixed · 456 MB · smallest but slow"]
-  classDef default fill:#FBFAF4,stroke:#475569,stroke-width:1.5px,color:#111827;
-  classDef good fill:#DCFCE7,stroke:#15803D,color:#0B4A22;
-  classDef bad fill:#FCEBD3,stroke:#B45309,color:#7A3B06;
-  classDef mid fill:#FEF9C3,stroke:#A16207,color:#713F12;
-  class I8 good
-  class I4 bad
-  class MX mid
-```
+<figure class="dgm" style="max-width:640px">
+  <div class="box">bge fp32 · 2272 MB</div>
+  <div class="arrow">↓</div>
+  <div class="row">
+    <div class="box good">int8 · 571 MB · near-lossless</div>
+    <div class="box bad">int4 · 1252 MB · bigger, slower</div>
+    <div class="box mid">mixed · 456 MB · smallest but slow</div>
+  </div>
+</figure>
 
 All four run on the same 30-question pool, same fp32 export. "Build" is the one step that defines each option; latency is arm64 CPU and directional.
 
@@ -544,52 +544,90 @@ Running it prints the byte breakdown from earlier, with `word_embeddings.weight`
 *Figures come from the shared evaluation pool: 30 questions, 20 candidate passages each, 512-token cap. Sizes are on-disk bytes, checked by summing every initializer in each ONNX file and comparing that back against the files themselves. Latency is arm64-local on the CPU provider and directional, not a production number. One caveat on it: the two halves were not timed in the same process. The fp32 and int8 runs warm up on two queries before the clock starts, the int4 and mixed runs do not, so those two carry a first-call penalty the others avoid. Over 30 queries at roughly 8.7 s each that is worth a percent or two, nowhere near the 2.4x gap, but it is not the same stopwatch.*
 
 
-<!-- Diagrams sit on a fixed light "paper" canvas in both themes. The mermaid
-     node/label text is dark, so on the site's dark background it would be
-     invisible without this; the light card keeps it readable either way. -->
+<!-- Native HTML/CSS diagrams. Boxes size to their own text so nothing ever
+     clips or overflows; titles centre by construction; a fixed light palette
+     keeps them readable in both light and dark themes. No mermaid, no CDN. -->
 <style>
-  .mermaid {
-    background: #fbfaf4;
-    border: 1px solid #e4dfce;
-    border-radius: 14px;
-    padding: 16px 12px;
-    margin: 1.4rem auto;
-    max-width: 760px;
-    overflow-x: auto;
-    text-align: center;
+  .dgm {
+    background: #fbfaf4; border: 1px solid #e4dfce; border-radius: 14px;
+    padding: 22px 18px; margin: 1.6rem auto; max-width: 560px;
+    color: #1f2937; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.4; display: flex; flex-direction: column; align-items: center;
   }
-  .mermaid svg { max-width: 100%; height: auto; }
-  /* Mermaid draws node/subgraph labels as HTML in <foreignObject>, so they
-     inherit the page's dark-mode (light) text colour and vanish on the light
-     card. Pin every label dark; node fill colours from the diagram are untouched. */
-  .mermaid foreignObject div,
-  .mermaid foreignObject span,
-  .mermaid foreignObject p,
-  .mermaid .nodeLabel,
-  .mermaid .edgeLabel,
-  .mermaid .cluster-label,
-  .mermaid text { color: #1f2937 !important; fill: #1f2937 !important; }
-  .mermaid .edgeLabel, .mermaid .edgeLabel foreignObject > div { background: #fbfaf4 !important; }
-  /* Subgraph (cluster) containers have no fill in these diagrams, so mermaid's
-     default renders dark; pin them to a light tone so the dark labels read. */
-  .mermaid .cluster rect { fill: #faf8f2 !important; stroke: #e5dfd0 !important; }
+  .dgm .box {
+    border: 1.5px solid #475569; border-radius: 8px; background: #ffffff; color: #111827;
+    padding: 9px 16px; text-align: center; font-size: .9rem; max-width: 100%;
+  }
+  .dgm .arrow { color: #8a9aa5; font-size: 1.1rem; line-height: 1; padding: 5px 0; }
+  .dgm .grp {
+    width: 100%; border: 2px solid; border-radius: 10px; padding: 12px; margin: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .dgm .grp > .t { font-size: .82rem; font-weight: 660; text-align: center; width: 100%; }
+  .dgm .grp.skip  { border-color: #B45309; background: #FCEBD3; }
+  .dgm .grp.skip  > .t { color: #7A3B06; }
+  .dgm .grp.quant { border-color: #15803D; background: #DCFCE7; }
+  .dgm .grp.quant > .t { color: #0B4A22; }
+  .dgm .grp.plain { border-color: #cbc4b0; background: #fcfbf6; }
+  .dgm .grp.plain > .t { color: #4a5568; }
+  .dgm .box.good { border-color: #15803D; background: #DCFCE7; color: #0B4A22; }
+  .dgm .box.bad  { border-color: #B45309; background: #FCEBD3; color: #7A3B06; }
+  .dgm .box.mid  { border-color: #A16207; background: #FEF9C3; color: #713F12; }
+  .dgm .row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; width: 100%; }
+  .dgm .row > * { flex: 1 1 200px; }
+  .dgm .col { display: flex; flex-direction: column; align-items: center; }
+  .dgm.dgm-lanes { align-items: stretch; gap: 12px; }
+  .dgm .lane { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .dgm .lane .box { font-size: .82rem; padding: 7px 11px; }
+  .dgm .lane .a { color: #8a9aa5; font-weight: 600; }
+  .dgm .lane-label { font-family: ui-monospace, monospace; font-weight: 660; font-size: .82rem; min-width: 3em; text-align: right; color: #4a5568; }
+  /* When the sketch script runs it hides the crisp CSS border/fill and draws a
+     rough one behind the (still-HTML) text. If rough.js fails to load, these
+     clean borders remain — graceful fallback, never broken boxes. */
+  .dgm.sketched .box, .dgm.sketched .grp { border-color: transparent !important; background: transparent !important; isolation: isolate; }
+  .dgm .sketch { position: absolute; left: 0; top: 0; z-index: -1; overflow: visible; pointer-events: none; }
 </style>
 
-<!-- Render the mermaid diagrams above. GitHub Pages (kramdown+Rouge) emits
-     ```mermaid fences as .language-mermaid code blocks and does not draw them,
-     so swap each into a <pre class="mermaid"> and run mermaid from the CDN. -->
+<!-- Excalidraw-style hand-drawn strokes via rough.js, drawn BEHIND each box.
+     The label text stays HTML on top, so it never clips or loses contrast. -->
 <script type="module">
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-  mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
-  let i = 0;
-  for (const block of [...document.querySelectorAll('.language-mermaid')]) {
-    const src = block.textContent;
-    try {
-      const { svg } = await mermaid.render('mmd-' + (i++), src);
-      const fig = document.createElement('div');
-      fig.className = 'mermaid';
-      fig.innerHTML = svg;
-      block.replaceWith(fig);
-    } catch (e) { console.error('mermaid render failed for diagram', i, e); }
+  import rough from 'https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.esm.js';
+  const NS = 'http://www.w3.org/2000/svg';
+  const palette = (el) => {
+    const c = el.classList;
+    if (c.contains('good'))  return ['#15803D', '#DCFCE7'];
+    if (c.contains('bad'))   return ['#B45309', '#FCEBD3'];
+    if (c.contains('mid'))   return ['#A16207', '#FEF9C3'];
+    if (c.contains('skip'))  return ['#B45309', '#FCEBD3'];
+    if (c.contains('quant')) return ['#15803D', '#DCFCE7'];
+    if (c.contains('plain')) return ['#9a9078', '#fcfbf6'];
+    return ['#475569', '#ffffff'];
+  };
+  function sketch(el) {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (!w || !h) return;
+    const [stroke, fill] = palette(el);
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', w); svg.setAttribute('height', h);
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.setAttribute('class', 'sketch');
+    const rc = rough.svg(svg);
+    svg.appendChild(rc.rectangle(2, 2, w - 4, h - 4, {
+      roughness: 1.25, bowing: 1.4, stroke, strokeWidth: 1.5,
+      fill, fillStyle: 'hachure', hachureGap: 7, fillWeight: 0.6,
+    }));
+    el.style.position = 'relative';
+    el.prepend(svg);
   }
+  function draw() {
+    document.querySelectorAll('.dgm .sketch').forEach((s) => s.remove());
+    document.querySelectorAll('.dgm').forEach((d) => {
+      d.classList.add('sketched');
+      d.querySelectorAll('.box, .grp').forEach(sketch);
+    });
+  }
+  const run = () => { try { draw(); } catch (e) { /* fallback: clean CSS boxes */ } };
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(run);
+  addEventListener('load', run);
+  let t; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(run, 200); });
 </script>
