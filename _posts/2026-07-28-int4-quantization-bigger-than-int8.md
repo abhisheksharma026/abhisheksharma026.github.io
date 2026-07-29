@@ -416,7 +416,7 @@ All four run on the same 30-question pool, same fp32 export. "Build" is the one 
 
 Reading it top to bottom: int8 holds hit@1 and MRR, gives back 0.02 on recall@5, and is the fastest of the quantized options, so it wins by default. int4 loses decisively on size and speed and is a wash on quality, all because it cannot touch the 1 GB embedding. Mixed precision is the only thing smaller than int8, but it buys that 115 MB with int4's latency and int4's accuracy dip, so it is a RAM-ceiling or GPU move, not a CPU default.
 
-## What I took away
+## My takeaway
 
 - Quantizers match on operation, not on size. Check which ops a tool actually rewrites before you assume a bit-width will shrink the whole model. One tiny tensor dump saved me from shipping a "compressed" model that was twice as heavy as the thing it replaced.
 - For a large-vocab multilingual encoder, the embedding basically is the model. About 45% of bge lives in one lookup table, so any plan that ignores it is optimizing the wrong 55%.
